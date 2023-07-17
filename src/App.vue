@@ -1,9 +1,15 @@
 <template>
   <div id="app">
-    <div class="photo-wall">
+    <div ref="list" class="photo-wall">
       <div v-for="item in list" :key="'no' + item.key" class="box" :style="{ ...item, padding }">
-        <div class="img">{{ item.key >= 0 ? Math.floor(item.key / 2) : item.key }}</div>
+        <div class="img" @click="handleClick(item)">{{ item.key >= 0 ? Math.floor(item.key / 2) : item.key }}</div>
       </div>
+    </div>
+    <div :class="['mask', show ? 'active' : '']" @click="show = false">
+      <div class="info">123</div>
+    </div>
+    <div :class="['photo', show ? 'active' : '']" ref="photo" :style="{ padding }">
+      <div class="img" />
     </div>
   </div>
 </template>
@@ -45,7 +51,35 @@ export default {
       //
       list: [],
       param: {},
-      piece: 0
+      piece: 0,
+      // 
+      show: false,
+      initStyle: {
+
+      }
+    }
+  },
+  watch: {
+    show(data) {
+      if (!data) {
+        const { width, height, top, bottom, left } = this.initStyle
+        this.$refs.photo.style.width = width
+        this.$refs.photo.style.height = height
+        this.$refs.photo.style.left = left
+        if (top) {
+          this.$refs.photo.style.top = top
+          this.$refs.photo.style.bottom = 'inherit'
+        } else {
+          this.$refs.photo.style.bottom = bottom
+          this.$refs.photo.style.top = 'inherit'
+        }
+        setTimeout(() => {
+          this.$refs.photo.style.left = 'inherit'
+          this.$refs.photo.style.top = 'inherit'
+          this.$refs.photo.style.bottom = 'inherit'
+          this.$refs.photo.style['transition-duration'] = 0
+        }, 601);
+      }
     }
   },
   mounted() {
@@ -383,6 +417,48 @@ export default {
         }
         return item
       })
+    },
+    handleClick(item) {
+      const { scrollLeft } = this.$refs.list;
+      const { width, height, top, bottom, left } = item
+      // 设置元素的初始
+      const initLeft = `calc(${left} - ${scrollLeft + 'px'})`
+      this.$refs.photo.style.width = width
+      this.$refs.photo.style.height = height
+      this.$refs.photo.style.left = initLeft
+      const initStyle = {
+        width,
+        height,
+        left: initLeft
+      }
+      if (top) {
+        this.$refs.photo.style.top = top
+        this.$refs.photo.style.bottom = 'inherit'
+        initStyle.top = top
+      } else {
+        this.$refs.photo.style.bottom = bottom
+        this.$refs.photo.style.top = 'inherit'
+        initStyle.bottom = bottom
+      }
+      this.initStyle = initStyle
+      this.show = true;
+      this.$nextTick(() => {
+        const w = width.replace(/[^0-9|.]/g, '')
+        const h = height.replace(/[^0-9|.]/g, '')
+        setTimeout(() => {
+          this.$refs.photo.style['transition-duration'] = `600ms`
+          this.$refs.photo.style.left = `calc(35vw - ${w / 2 + 'vh'})`
+          if (top) {
+            this.$refs.photo.style.top = `calc(50vh - ${h / 2 + 'vh'})`
+            this.$refs.photo.style.bottom = 'inherit'
+          } else {
+            this.$refs.photo.style.top = 'inherit'
+            this.$refs.photo.style.bottom = `calc(50vh - ${h / 2 + 'vh'})`
+          }
+        }, 1);
+
+      })
+
     }
 
   },
@@ -412,8 +488,19 @@ body {
 .photo-wall {
   position: relative;
   height: 100%;
+  width: 100%;
   transform-style: preserve-3d;
   perspective: 800px;
+  overflow: auto;
+
+  &::-webkit-scrollbar {
+    display: none;
+    /*滚动条整体样式*/
+    width: 8px;
+    /*高宽分别对应横竖滚动条的尺寸*/
+    height: 1px;
+  }
+
 
   .box {
     position: absolute;
@@ -421,7 +508,8 @@ body {
     transition-duration: 600ms;
     transform-origin: 0 center;
     // opacity: 0;
-    animation: show 600ms ease-out;
+    animation: show 700ms ease-out;
+    z-index: 2;
 
     .img {
       height: 100%;
@@ -439,6 +527,52 @@ body {
         transform: rotateY(0);
       }
     }
+  }
+
+}
+
+.mask {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  transition-duration: 400ms;
+  overflow: hidden;
+  z-index: 9;
+  backdrop-filter: blur(5px);
+  background-color: rgba(0, 0, 0, .5);
+  pointer-events: none;
+  opacity: 0;
+
+  .info {
+    position: absolute;
+    width: 30%;
+    height: 100%;
+    right: -30%;
+    top: 0;
+    background-color: #fff;
+    transition-duration: 400ms;
+  }
+
+  &.active {
+    pointer-events: visible;
+    opacity: 1;
+
+    .info {
+      right: 0
+    }
+  }
+}
+
+.photo {
+  position: absolute;
+  border: 1px #efefef solid;
+  z-index: 19;
+
+  .img {
+    height: 100%;
+    background-color: #efefef;
   }
 }
 </style>
