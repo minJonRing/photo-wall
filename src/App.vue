@@ -507,8 +507,8 @@ body {
     border: 1px #efefef solid;
     transition-duration: 600ms;
     transform-origin: 0 center;
-    // opacity: 0;
-    animation: show 700ms ease-out;
+    opacity: 0;
+    animation: show 700ms ease-out forwards;
     z-index: 2;
 
     .img {
@@ -549,9 +549,10 @@ body {
     position: absolute;
     width: 30%;
     height: 100%;
-    right: -30%;
-    top: 0;
+    right: 0;
+    top: 50%;
     background-color: #fff;
+    opacity: 0;
     transition-duration: 400ms;
   }
 
@@ -560,7 +561,8 @@ body {
     opacity: 1;
 
     .info {
-      right: 0
+      opacity: 1;
+      top: 0
     }
   }
 }
