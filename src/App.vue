@@ -1,16 +1,22 @@
 <template>
   <div id="app">
     <div ref="list" class="photo-wall">
-      <div v-for="item in list" :key="'no' + item.key" class="box" :style="{ ...item, padding }">
-        <div class="img" @click="handleClick(item)">{{ item.key >= 0 ? Math.floor(item.key / 2) : item.key }}</div>
+      <div v-for="item in list" :key="'no' + item.key" :ref="`box${item.key}`" :class="['box', 'box' + item.key]"
+        :style="{ ...item, padding }">
+        <div class="img" @click="(e) => handleClick(e, item)">
+          <!-- <img :src="item.src" /> -->
+        </div>
       </div>
     </div>
     <div :class="['mask', show ? 'active' : '']" @click="show = false">
       <div class="info">123</div>
     </div>
     <div :class="['photo', show ? 'active' : '']" ref="photo" :style="{ padding }">
-      <div class="img" />
+      <div class="img">
+        <img :src="showSrc" />
+      </div>
     </div>
+    <div class="drop" ref="drop"></div>
   </div>
 </template>
 
@@ -38,6 +44,13 @@ const wh = {
     height: 12
   }
 }
+
+import img1 from '@/assets/1.jpeg'
+import img2 from '@/assets/2.jpeg'
+import img3 from '@/assets/3.jpeg'
+import img4 from '@/assets/4.jpeg'
+import img5 from '@/assets/5.jpeg'
+// import * as TWEEN from '@tweenjs/tween.js'
 export default {
   name: 'App',
   props: {
@@ -56,7 +69,8 @@ export default {
       show: false,
       initStyle: {
 
-      }
+      },
+      showSrc: ''
     }
   },
   watch: {
@@ -85,6 +99,7 @@ export default {
   mounted() {
     this.init()
     this.CreateGos()
+    window.angle = this.angle
   },
   methods: {
     init() {
@@ -397,74 +412,153 @@ export default {
           height: height + 'vh',
           left: x + 'vh',
           sl: 100 + +x + 'vh',
-          'transition-delay': `${i * 5}ms`,
+          // 'transition-delay': `${i * 5}ms`,
           'animation-delay': `${i * 5}ms`,// `${Math.floor(Math.random() * 1000)}ms`,
+          src: { 0: img1, 1: img2, 2: img3, 3: img4, 4: img5 }[i % 5],
+          origin: {
+            x: x + width / 2,
+            y: 0
+          }
+
         }
         let _d = direction;
         if (key >= 0) {
+          // 判断上/下
           _d = key % 2 ? 0 : 1
+          // 判断组别
           const _k = Math.floor(key / 92)
+          // left的值
+          let l = 0
+          // 0 上 1 下
           if (_d === 0) {
-            item.left = wh[3].width * 2 + +x + (this.piece * _k) + 'vh'
+            l = wh[3].width * 2 + +x + (this.piece * _k)
           } else {
-            item.left = +x + (this.piece * _k) + 'vh'
+            l = +x + (this.piece * _k)
           }
+          // 设置left的值 和 中心点x的值
+          item.left = l + 'vh'
+          item.origin.x = l + width / 2
         }
+        // 0 上 1 下
         if (_d === 0) {
-          item.bottom = 50 + +y + 'vh'
+          // bottom的值
+          const b = 50 + +y
+          item.bottom = b + 'vh'
+          // 中心点top的值 bottm 转化top
+          item.origin.y = 100 - b - height / 2
         } else {
-          item.top = 50 + +y + 'vh'
+          // top的值
+          const t = 50 + +y
+          item.top = t + 'vh'
+          // 中心点top的值
+          item.origin.y = t + height / 2
         }
         return item
       })
     },
-    handleClick(item) {
-      const { scrollLeft } = this.$refs.list;
-      const { width, height, top, bottom, left } = item
-      // 设置元素的初始
-      const initLeft = `calc(${left} - ${scrollLeft + 'px'})`
-      this.$refs.photo.style.width = width
-      this.$refs.photo.style.height = height
-      this.$refs.photo.style.left = initLeft
-      const initStyle = {
-        width,
-        height,
-        left: initLeft
+    // handleClick(e, item) {
+    //   const { scrollLeft } = this.$refs.list;
+    //   const { width, height, top, bottom, left, src } = item
+    //   // 设置元素的初始
+    //   const initLeft = `calc(${left} - ${scrollLeft + 'px'})`
+    //   this.$refs.photo.style.width = width
+    //   this.$refs.photo.style.height = height
+    //   this.$refs.photo.style.left = initLeft
+    //   const initStyle = {
+    //     width,
+    //     height,
+    //     left: initLeft
+    //   }
+    //   if (top) {
+    //     this.$refs.photo.style.top = top
+    //     this.$refs.photo.style.bottom = 'inherit'
+    //     initStyle.top = top
+    //   } else {
+    //     this.$refs.photo.style.bottom = bottom
+    //     this.$refs.photo.style.top = 'inherit'
+    //     initStyle.bottom = bottom
+    //   }
+    //   this.showSrc = src
+    //   this.initStyle = initStyle
+    //   this.show = true;
+    //   this.$nextTick(() => {
+    //     const { naturalWidth, naturalHeight } = e.target
+    //     let w = 0, h = 0;
+    //     if (500 > naturalHeight) {
+    //       w = naturalWidth
+    //       h = naturalHeight
+    //     } else {
+    //       const ratio = 500 / naturalHeight
+    //       w = naturalWidth * ratio
+    //       h = 500
+    //     }
+    //     setTimeout(() => {
+    //       this.$refs.photo.style.width = w + 'px'
+    //       this.$refs.photo.style.height = h + 'px'
+    //       this.$refs.photo.style['transition-duration'] = `600ms`
+    //       this.$refs.photo.style.left = `calc(35vw - ${w / 2 + 'px'})`
+    //       if (top) {
+    //         this.$refs.photo.style.top = `calc(50vh - ${h / 2 + 'px'})`
+    //         this.$refs.photo.style.bottom = 'inherit'
+    //       } else {
+    //         this.$refs.photo.style.top = 'inherit'
+    //         this.$refs.photo.style.bottom = `calc(50vh - ${h / 2 + 'px'})`
+    //       }
+    //     }, 1);
+
+    //   })
+
+    // }
+    angle(start, end) {
+      const diff_x = end.x - start.x;
+      const diff_y = end.y - start.y;
+      //返回角度,不是弧度
+      const deg = 180 / Math.PI * Math.atan2(diff_y, diff_x)
+      const radianS = Math.sin(deg * Math.PI / 180)
+      const radianC = Math.cos(deg * Math.PI / 180)
+      // 
+      return {
+        deg,
+        radianS,
+        radianC,
       }
-      if (top) {
-        this.$refs.photo.style.top = top
-        this.$refs.photo.style.bottom = 'inherit'
-        initStyle.top = top
-      } else {
-        this.$refs.photo.style.bottom = bottom
-        this.$refs.photo.style.top = 'inherit'
-        initStyle.bottom = bottom
-      }
-      this.initStyle = initStyle
-      this.show = true;
-      this.$nextTick(() => {
-        const w = width.replace(/[^0-9|.]/g, '')
-        const h = height.replace(/[^0-9|.]/g, '')
-        setTimeout(() => {
-          this.$refs.photo.style['transition-duration'] = `600ms`
-          this.$refs.photo.style.left = `calc(35vw - ${w / 2 + 'vh'})`
-          if (top) {
-            this.$refs.photo.style.top = `calc(50vh - ${h / 2 + 'vh'})`
-            this.$refs.photo.style.bottom = 'inherit'
-          } else {
-            this.$refs.photo.style.top = 'inherit'
-            this.$refs.photo.style.bottom = `calc(50vh - ${h / 2 + 'vh'})`
+    },
+    handleClick(e, item) {
+      const baseDistance = 20
+      const { key, origin: { x, y } } = item
+      this.$refs.drop.style.left = x + 'vh';
+      this.$refs.drop.style.top = y + 'vh';
+      this.$refs[`box${key}`][0].style.setProperty('transform', 'scale(1.5)')
+      this.list.map(({ key: ik, origin }) => {
+        const { x: ix, y: iy } = origin;
+        const w = Math.abs(x - ix)
+        const h = Math.abs(y - iy)
+        const len = Math.sqrt(Math.pow(w, 2) + Math.pow(h, 2))
+        // y = 30 iy = 20
+        const { deg: d, radianS, radianC } = this.angle({ x, y }, { x: ix, y: iy > y ? y * 2 - iy : iy * 2 })
+        let _d = d < 0 ? 360 + d : d;
+        let deg = _d <= 360 ? _d : _d % 360
+        if (len < baseDistance && ik != key) {
+          if (ik !== key) {
+            const sub = (baseDistance - len) / 2;
+            if (ik == 141) {
+              console.log(deg, radianC * sub, radianS * sub)
+            }
+            // this.$refs[`box${ik}`][0].style.width = wh[2].width + 'vh'
+            // this.$refs[`box${ik}`][0].style.height = wh[2].height + 'vh'
+            this.$refs[`box${ik}`][0].style.setProperty('transform', `translate(${radianC * sub}vh,${deg > 180 && deg < 360 ? Math.abs(radianS * sub) : -(radianS * sub)}vh)`)
           }
-        }, 1);
-
+        } else {
+          this.$refs[`box${ik}`][0].style.setProperty('transform', `translate(0,0)`)
+        }
       })
-
     }
 
   },
   randomRange(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min
-  }
+  },
+
 
 }
 </script>
@@ -504,16 +598,23 @@ body {
 
   .box {
     position: absolute;
-    border: 1px #efefef solid;
+    // border: 1px #efefef solid;
     transition-duration: 600ms;
     transform-origin: 0 center;
-    opacity: 0;
-    animation: show 700ms ease-out forwards;
+    // opacity: 0;
+    animation: show 700ms ease-out;
     z-index: 2;
 
     .img {
       height: 100%;
       background-color: #efefef;
+
+      img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
     }
 
     @keyframes show {
@@ -549,8 +650,8 @@ body {
     position: absolute;
     width: 30%;
     height: 100%;
-    right: 0;
-    top: 50%;
+    right: -15%;
+    top: 0;
     background-color: #fff;
     opacity: 0;
     transition-duration: 400ms;
@@ -562,7 +663,7 @@ body {
 
     .info {
       opacity: 1;
-      top: 0
+      right: 0
     }
   }
 }
@@ -575,6 +676,21 @@ body {
   .img {
     height: 100%;
     background-color: #efefef;
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
   }
+}
+
+.drop {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  background-color: red;
+  z-index: 29;
 }
 </style>
