@@ -1,8 +1,8 @@
 <template>
   <div id="app">
     <div ref="list" class="photo-wall">
-      <div v-for="item in initList" :key="'no' + item.key" :ref="`box${item.key}`" :class="['box', 'box' + item.key]"
-        :style="{ ...bindStyle(item), padding }">
+      <div v-for="item in list" :key="'no' + item.key" :ref="`box${item.key}`" :class="['box', 'box' + item.key]"
+        :style="{ ...item, padding }">
         <div class="img" @click="(e) => handleClick(e, item)">
           <!-- <img :src="item.src" /> -->
         </div>
@@ -11,8 +11,12 @@
     <div :class="['mask', show ? 'active' : '']" @click="show = false">
       <div class="info">123</div>
     </div>
+    <div :class="['photo', show ? 'active' : '']" ref="photo" :style="{ padding }">
+      <div class="img">
+        <img :src="showSrc" />
+      </div>
+    </div>
     <div class="drop" ref="drop"></div>
-    <div class="line"></div>
   </div>
 </template>
 
@@ -46,7 +50,7 @@ import img2 from '@/assets/2.jpeg'
 import img3 from '@/assets/3.jpeg'
 import img4 from '@/assets/4.jpeg'
 import img5 from '@/assets/5.jpeg'
-import * as TWEEN from '@tweenjs/tween.js'
+// import * as TWEEN from '@tweenjs/tween.js'
 export default {
   name: 'App',
   props: {
@@ -58,9 +62,7 @@ export default {
   data() {
     return {
       //
-      initList: [],
       list: [],
-      animeGroup: [],
       param: {},
       // 屏幕中间值
       mid: 0,
@@ -99,35 +101,9 @@ export default {
     }
   },
   mounted() {
-    this.mid = window.innerHeight / 2
+    this.mid = window.innerHeight
     this.init()
-    this.CreateGos(new Array(200).fill(1))
-    this.$nextTick(() => {
-      setTimeout(() => {
-        const obj = {}
-        this.animeGroup = this.animeGroup.map((el) => {
-          const { key, transform } = el
-          const option = { ...transform, opacity: 0.3 }
-          obj['e' + key] = new TWEEN.Tween(option, false) // 创建一个修改“坐标”的新 tween。
-            .to({ x: 0, y: 0, z: 0, opacity: 1 }, 1200) // 在 1 秒内移动到 (300, 200)。
-            .easing(TWEEN.Easing.Quadratic.In) // 使用缓动函数使动画流畅。
-            .onUpdate(() => {
-              this.$refs['box' + key][0].style.setProperty('transform', `matrix3d(1,0,0,0, 0,1,0,0, 0,0,1,0, ${option.x},${option.y},${option.z},1)`)
-              this.$refs['box' + key][0].style.opacity = option.opacity
-            })
-            .start()
-          return { ...el, transform: { x: 0, y: 0, z: 0 } }
-        })
-        function animate() {
-          for (let el in obj) {
-            obj[el].update()
-          }
-          requestAnimationFrame(animate)
-        }
-        requestAnimationFrame(animate)
-      }, 600);
-
-    })
+    this.CreateGos()
     window.angle = this.angle
   },
   methods: {
@@ -424,77 +400,120 @@ export default {
         },
       }
     },
-    CreateGos(list) {
-      const animeGroup = []
-      this.initList = list.map((el, i) => {
-        // 创建一个元素
+    CreateGos() {
+      const list = new Array(300).fill(1)
+      this.list = list.map((el, i) => {
         let item = {};
         let key = i - 6;
-        // 获取当前元素在param里的索引值
         let index = key
-        // key>=0 时 开始规律循环
         if (key >= 0) {
           index = Math.floor(key % 92 / 2)
         }
         const { type, direction, x, y } = this.param[index]
         const { width, height } = wh[type]
-        const startX = Math.floor(Math.random() * this.mid * 2 - this.mid)
-        const startY = Math.floor(Math.random() * this.mid * 2 - this.mid)
-        const startZ = Math.floor(Math.random() * this.mid * 2 - this.mid)
         item = {
           key,
-          width: width,
-          height: height,
-          left: x,
-          top: 0,
-          // 图片源
+          width: width + 'px',
+          height: height + 'px',
+          left: x + 'px',
+          sl: 100 + +x + 'px',
+          // 'transition-delay': `${i * 5}ms`,
+          'animation-delay': `${i * 5}ms`,// `${Math.floor(Math.random() * 1000)}ms`,
           src: { 0: img1, 1: img2, 2: img3, 3: img4, 4: img5 }[i % 5],
-          // 中心点
           origin: {
-            x: 0,
+            x: x + width / 2,
             y: 0
           }
+
         }
-        // 判断方向 中线上面0 下面1
         let _d = direction;
         if (key >= 0) {
+          // 判断上/下
           _d = key % 2 ? 0 : 1
-          // 判断组别 92个图片为1组
+          // 判断组别
           const _k = Math.floor(key / 92)
           // left的值
-          let l = +x + (this.piece * _k)
-          // 0上 1下
+          let l = 0
+          // 0 上 1 下
           if (_d === 0) {
-            l = wh[3].width * 2 + l
+            l = wh[3].width * 2 + +x + (this.piece * _k)
+          } else {
+            l = +x + (this.piece * _k)
           }
           // 设置left的值 和 中心点x的值
-          item.left = l
+          item.left = l + 'px'
           item.origin.x = l + width / 2
         }
-        // 0上 1下
-        let t = 0
+        // 0 上 1 下
         if (_d === 0) {
-          // 中线上面的还要剪掉自身高度
-          t = this.mid - y - height
+          // bottom的值
+          const b = this.mid + +y
+          item.bottom = b + 'px'
+          // 中心点top的值 bottm 转化top
+          item.origin.y = 100 - b - height / 2
         } else {
-          t = this.mid + y
+          // top的值
+          const t = this.mid + +y
+          item.top = t + 'px'
+          // 中心点top的值
+          item.origin.y = t + height / 2
         }
-        // top的值
-        item.top = t
-        item.origin.y = t + height / 2;
-        animeGroup.push({
-          key,
-          origin: item.origin,
-          transform: {
-            x: startX,
-            y: startY,
-            z: startZ
-          }
-        })
         return item
       })
-      this.animeGroup = animeGroup
     },
+    // handleClick(e, item) {
+    //   const { scrollLeft } = this.$refs.list;
+    //   const { width, height, top, bottom, left, src } = item
+    //   // 设置元素的初始
+    //   const initLeft = `calc(${left} - ${scrollLeft + 'px'})`
+    //   this.$refs.photo.style.width = width
+    //   this.$refs.photo.style.height = height
+    //   this.$refs.photo.style.left = initLeft
+    //   const initStyle = {
+    //     width,
+    //     height,
+    //     left: initLeft
+    //   }
+    //   if (top) {
+    //     this.$refs.photo.style.top = top
+    //     this.$refs.photo.style.bottom = 'inherit'
+    //     initStyle.top = top
+    //   } else {
+    //     this.$refs.photo.style.bottom = bottom
+    //     this.$refs.photo.style.top = 'inherit'
+    //     initStyle.bottom = bottom
+    //   }
+    //   this.showSrc = src
+    //   this.initStyle = initStyle
+    //   this.show = true;
+    //   this.$nextTick(() => {
+    //     const { naturalWidth, naturalHeight } = e.target
+    //     let w = 0, h = 0;
+    //     if (500 > naturalHeight) {
+    //       w = naturalWidth
+    //       h = naturalHeight
+    //     } else {
+    //       const ratio = 500 / naturalHeight
+    //       w = naturalWidth * ratio
+    //       h = 500
+    //     }
+    //     setTimeout(() => {
+    //       this.$refs.photo.style.width = w + 'px'
+    //       this.$refs.photo.style.height = h + 'px'
+    //       this.$refs.photo.style['transition-duration'] = `600ms`
+    //       this.$refs.photo.style.left = `calc(35vw - ${w / 2 + 'px'})`
+    //       if (top) {
+    //         this.$refs.photo.style.top = `calc(50vh - ${h / 2 + 'px'})`
+    //         this.$refs.photo.style.bottom = 'inherit'
+    //       } else {
+    //         this.$refs.photo.style.top = 'inherit'
+    //         this.$refs.photo.style.bottom = `calc(50vh - ${h / 2 + 'px'})`
+    //       }
+    //     }, 1);
+
+    //   })
+
+    // }
     angle(start, end) {
       const diff_x = end.x - start.x;
       const diff_y = end.y - start.y;
@@ -510,58 +529,42 @@ export default {
       }
     },
     handleClick(e, item) {
-      console.log(e, item)
-      // a b c d e f
-      // const matrix = `1,0,0,1,0,0`
-      const { x, y, z } = {
-        x: 10, y: 10, z: 1
-      }
-
-      const _matrix = `${1 * x},${0 * x},${0 * y},${1 * y},${0 * z},${0 * z}`
-      console.log(_matrix)
-      // const baseDistance = 20
-      // const { key } = item;
-      // const { transform: { x, y, z } } = this.animeGroup[key + 6]
-      // this.$refs.photo.style.left = left + 'px';
-      // this.$refs.photo.style.top = top + 'px';
-      // this.$refs.photo.style.width = width + 'px';
-      // this.$refs.photo.style.height = height + 'px';
-      // this.$refs[`box${key}`][0].style.setProperty('transform', 'scale(1.5)')
-    },
-    anime(el, key) {
-      const { transform: { x, y, z } } = this.animeGroup[key + 6]
-      const option = { x, y, z }
-      const tween = new TWEEN.Tween(option, false) // 创建一个修改“坐标”的新 tween。
-        .to({ x: 0, y: 0, z: 0, opacity: 1 }, 1200) // 在 1 秒内移动到 (300, 200)。
-        .easing(TWEEN.Easing.Quadratic.In) // 使用缓动函数使动画流畅。
-        .onUpdate(() => {
-          this.$refs['box' + key][0].style.setProperty('transform', `scale3d(2,2,1.5)`)
-        })
-        .start()
-        .end(() => {
-        })
-      function animate() {
-        tween.update()
-        requestAnimationFrame(animate)
-      }
-      requestAnimationFrame(animate)
-    },
-    randomRange(min, max) {
-      return Math.floor(Math.random() * (max - min + 1)) + min
-    },
-    bindStyle(item) {
-      const { key, width, height, left, top } = item;
-      const { transform: { x, y, z } } = this.animeGroup[key + 6]
-      return {
-        width: width + 'px',
-        height: height + 'px',
-        left: left + 'px',
-        top: top + 'px',
-        transform: `matrix3d(1,0,0,0, 0,1,0,0, 0,0,1,0, ${x},${y},${z},1)`//translate3d(${x}px,${y}px,${z}px)`
-      }
+      const baseDistance = 20
+      const { key, origin: { x, y } } = item
+      this.$refs.drop.style.left = x + 'vh';
+      this.$refs.drop.style.top = y + 'vh';
+      this.$refs[`box${key}`][0].style.setProperty('transform', 'scale(1.5)')
+      this.list.map(({ key: ik, origin }) => {
+        const { x: ix, y: iy } = origin;
+        const w = Math.abs(x - ix)
+        const h = Math.abs(y - iy)
+        const len = Math.sqrt(Math.pow(w, 2) + Math.pow(h, 2))
+        // y = 30 iy = 20
+        const { deg: d, radianS, radianC } = this.angle({ x, y }, { x: ix, y: iy > y ? y * 2 - iy : iy * 2 })
+        let _d = d < 0 ? 360 + d : d;
+        let deg = _d <= 360 ? _d : _d % 360
+        if (len < baseDistance && ik != key) {
+          if (ik !== key) {
+            const sub = (baseDistance - len) / 2;
+            if (ik == 141) {
+              console.log(deg, radianC * sub, radianS * sub)
+            }
+            // this.$refs[`box${ik}`][0].style.width = wh[2].width + 'vh'
+            // this.$refs[`box${ik}`][0].style.height = wh[2].height + 'vh'
+            this.$refs[`box${ik}`][0].style.setProperty('transform', `translate(${radianC * sub}vh,${deg > 180 && deg < 360 ? Math.abs(radianS * sub) : -(radianS * sub)}vh)`)
+          }
+        } else {
+          this.$refs[`box${ik}`][0].style.setProperty('transform', `translate(0,0)`)
+        }
+      })
     }
 
   },
+  randomRange(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min
+  },
+
+
 }
 </script>
 
@@ -591,12 +594,20 @@ body {
 
   &::-webkit-scrollbar {
     display: none;
+    /*滚动条整体样式*/
+    width: 8px;
+    /*高宽分别对应横竖滚动条的尺寸*/
+    height: 1px;
   }
+
 
   .box {
     position: absolute;
-    transform-origin: center center;
-    opacity: 0.3;
+    // border: 1px #efefef solid;
+    transition-duration: 600ms;
+    transform-origin: 0 center;
+    // opacity: 0;
+    animation: show 700ms ease-out;
     z-index: 2;
 
     .img {
@@ -608,6 +619,18 @@ body {
         width: 100%;
         height: 100%;
         object-fit: cover;
+      }
+    }
+
+    @keyframes show {
+      0% {
+        opacity: 0;
+        transform: rotateY(-45deg);
+      }
+
+      100% {
+        opacity: 1;
+        transform: rotateY(0);
       }
     }
   }
@@ -650,6 +673,23 @@ body {
   }
 }
 
+.photo {
+  position: absolute;
+  border: 1px #efefef solid;
+  z-index: 19;
+
+  .img {
+    height: 100%;
+    background-color: #efefef;
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+}
 
 .drop {
   position: absolute;
@@ -657,13 +697,5 @@ body {
   height: 5px;
   background-color: red;
   z-index: 29;
-}
-
-.line {
-  position: fixed;
-  top: 50%;
-  left: 0;
-  width: 100%;
-  border-top: 1px red solid;
 }
 </style>
