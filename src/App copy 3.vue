@@ -2,9 +2,9 @@
   <div id="app">
     <div ref="list" class="photo-wall">
       <div v-for="item in initList" :key="'no' + item.key" :ref="`box${item.key}`" :class="['box', 'box' + item.key]"
-        :attr-key="item.key" :style="bindStyle(item)">
-        <div class="img" @click="handleClick(item)" @dblclick="handleClick(item, 'db')" :attr-key="item.key">
-          <!-- <img :src="item.src" /> -->{{ item.key }}
+        :style="bindStyle(item)">
+        <div class="img" @click="handleClick(item)">
+          <!-- <img :src="item.src" /> -->
         </div>
       </div>
     </div>
@@ -95,16 +95,12 @@ export default {
   mounted() {
     this.mid = window.innerHeight / 2
     this.init()
-    this.createGos(new Array(800).fill(1))
+    this.createGos(new Array(200).fill(1))
     this.$nextTick(() => {
       this.initAnime()
-      // 
-      this.initHandle()
-      this.initScroll()
     })
-
     window.angle = this.angle
-    requestAnimationFrame(this.animate)
+    // requestAnimationFrame(this.animate)
   },
   methods: {
     animate() {
@@ -476,7 +472,6 @@ export default {
       })
       this.animeGroup = animeGroup
     },
-    // 开机动画
     initAnime(time = 600) {
       setTimeout(() => {
         const obj = {};
@@ -502,10 +497,9 @@ export default {
         requestAnimationFrame(animate)
       }, time);
     },
-    // 获取2点间的距离和角度
     angle(start, end) {
       const diff_x = end.x - start.x;
-      const diff_y = -(end.y - start.y);
+      const diff_y = end.y - start.y;
       //返回角度,不是弧度
       const deg = 180 / Math.PI * Math.atan2(diff_y, diff_x)
       const radianS = Math.sin(deg * Math.PI / 180)
@@ -521,95 +515,15 @@ export default {
         radianC,
       }
     },
-    // 绑定事件
-    initHandle() {
-      let target = null
-      let key = 0
-      let move = false
-      let initX = 0
-      let initY = 0
-      let subX = 0
-      let subY = 0
-      const imsg = document.querySelectorAll('.box')
-      for (let img of imsg) {
-        img.addEventListener('mousedown', (e) => {
-          const { pageX, pageY } = e
-          key = e.target.attributes['attr-key'].value
-          target = this.$refs['box' + key][0]
-          target.style.zIndex = 99
-          initX = pageX
-          initY = pageY
-          move = true
-        })
-      }
-      document.addEventListener('mousemove', (e) => {
-        if (move) {
-          const { pageX, pageY } = e
-          subX = pageX - initX
-          subY = pageY - initY
-          initX = pageX
-          initY = pageY
-          const anime = this.animeGroup[key]
-          const { x, y, width, height } = anime
-          const mx = x + subX
-          const my = y + subY
-          target.style.left = mx + 'px'
-          target.style.top = my + 'px'
-          this.animeGroup[key] = {
-            ...anime,
-            x: mx,
-            y: my,
-            origin: {
-              x: mx + width / 2,
-              y: my + height / 2,
-            }
-          }
-        }
-      })
-      document.addEventListener('mouseup', () => {
-        target.style.zIndex = 2
-        move = false
-      })
-    },
-    // 滚动事件
-    initScroll() {
-      const scrollEle = this.$refs.list;
-      let initScrollLeft = 0
-      scrollEle.addEventListener('scroll', (e) => {
-        const { target: { scrollLeft } } = e;
-        const subX = scrollLeft - initScrollLeft
-        initScrollLeft = scrollLeft
-        Object.values(this.animeGroup).filter(({ show }) => show).map(ele => {
-          const { key, x, width, origin: { y } } = ele
-          const mx = x + subX
-          this.animeGroup[key] = {
-            ...ele,
-            x: mx,
-            origin: {
-              x: mx + width / 2,
-              y
-            }
-          }
-          this.$refs['box' + key][0].style.left = mx + 'px'
-        })
-      })
-    },
-    // 点击图片
-    handleClick(item, type) {
+    handleClick(item) {
       const { key } = item;
       const { show } = this.animeGroup[key]
-      if (type === 'db') {
-        console.log(1)
-        if (show) {
-          this.animeGroup[key].show = false
-        }
+      if (show) {
+        this.animeGroup[key].show = false
       } else {
-        console.log(2)
-        if (!show) {
-          this.animeGroup[key].show = true
-        }
+        this.animeGroup[key].show = true
       }
-      // this.animeUpload()
+      this.animeUpload()
     },
     animeUpload() {
       const showEle = Object.values(this.animeGroup).filter(({ show }) => show);
@@ -636,83 +550,94 @@ export default {
         this.anime(key, startOption, endOption)
       })
     },
-    anime(key) {
+    anime(key, start, end) {
       const animeItem = this.animeGroup[key]
       const { origin: { x: sx, y: sy } } = animeItem
-      // console.log(start, end)
-      // const tween = new TWEEN.Tween(start, false) // 创建一个修改“坐标”的新 tween。
-      //   .to(end, 600) // 在 1 秒内移动到 (300, 200)。
-      //   .easing(TWEEN.Easing.Quadratic.Out) // 使用缓动函数使动画流畅。
-      //   .onUpdate(() => {
-      //     const { width, height, x, y } = start
+      const tween = new TWEEN.Tween(start, false) // 创建一个修改“坐标”的新 tween。
+        .to(end, 600) // 在 1 秒内移动到 (300, 200)。
+        .easing(TWEEN.Easing.Quadratic.Out) // 使用缓动函数使动画流畅。
+        .onUpdate(() => {
+          const { width, height, x, y } = start
 
-      //     this.$refs['box' + key][0].style.width = width + 'px'
-      //     this.$refs['box' + key][0].style.height = height + 'px'
-      //     this.$refs['box' + key][0].style.setProperty('left', x + 'px')
-      //     this.$refs['box' + key][0].style.setProperty('top', y + 'px')
-      //     this.animeGroup[key] = {
-      //       ...animeItem,
-      //       width, height, x, y
-      //     }
-      //   })
-      //   .start()
+          this.$refs['box' + key][0].style.width = width + 'px'
+          this.$refs['box' + key][0].style.height = height + 'px'
+          this.$refs['box' + key][0].style.setProperty('left', x + 'px')
+          this.$refs['box' + key][0].style.setProperty('top', y + 'px')
+          this.animeGroup[key] = {
+            ...animeItem,
+            width, height, x, y
+          }
+        })
+        .start()
       // 最大距离
-      let animeGroup = JSON.parse(JSON.stringify(this.animeGroup))
       const maxRange = 400
-      Object.values(this.animeGroup).filter(({ key: k }) => k != key).map((ele) => {
-        const { key: eKey, initX, initY, width, height, origin: { x: ex, y: ey }, x, y } = ele;
+      const obj = {}
+      Object.values(this.animeGroup).filter(({ show }) => !show).map((ele) => {
+        const { key: eKey, width, height, initX, initY, origin: { x: ex, y: ey }, x, y } = ele;
         const { range, radianS, radianC } = this.angle({ x: sx, y: sy }, { x: ex, y: ey })
-        // 变化速度
-        const speed = 8
-        // 移动到的位置
-        let mx = 0
-        let my = 0
         if (range <= maxRange) {
           const subRange = maxRange - range;
-          // 100 100 50 150
-          const endX = x + Math.floor(radianC * subRange)
-          const endY = y - Math.floor(radianS * subRange)
-          // -50 50
-          let subX = endX - x, subY = endY - y;
-          mx = x + Math.ceil(subX / speed)
-          my = y + Math.ceil(subY / speed)
-          this.$refs['box' + eKey][0].style.setProperty('left', mx + 'px')
-          this.$refs['box' + eKey][0].style.setProperty('top', my + 'px')
-          animeGroup[eKey] = {
-            ...ele,
-            x: mx,
-            y: my,
-            origin: {
-              x: mx + width / 2,
-              y: my + height / 2
-            }
+          const _x = x + radianC * subRange
+          const _y = y + radianS * subRange
+          // 
+          const option = {
+            x,
+            y,
           }
-
-        } else if (range > (maxRange + 1) && !ele.show && (initX != x || initY != y)) {
-          let subX = initX - x, subY = initY - y;
-          mx = x + (subX > 0 ? Math.ceil(subX / speed) : -Math.ceil(-subX / speed))
-          my = y + (subY > 0 ? Math.ceil(subY / speed) : -Math.ceil(-subY / speed))
-          this.$refs['box' + eKey][0].style.setProperty('left', mx + 'px')
-          this.$refs['box' + eKey][0].style.setProperty('top', my + 'px')
-          animeGroup[eKey] = {
-            ...ele,
-            x: mx,
-            y: my,
-            origin: {
-              x: mx + width / 2,
-              y: my + height / 2
-            }
+          obj['e' + eKey] = new TWEEN.Tween(option, false) // 创建一个修改“坐标”的新 tween。
+            .to({ x: _x, y: _y }, 600) // 在 1 秒内移动到 (300, 200)。
+            .easing(TWEEN.Easing.Quadratic.Out) // 使用缓动函数使动画流畅。
+            .onUpdate(() => {
+              const { x, y } = option
+              this.$refs['box' + eKey][0].style.setProperty('left', x + 'px')
+              this.$refs['box' + eKey][0].style.setProperty('top', y + 'px')
+              this.animeGroup[eKey] = {
+                ...ele,
+                x,
+                y,
+                option: {
+                  x: x + width / 2,
+                  y: y + height / 2
+                }
+              }
+            })
+            .start()
+        } else {
+          const startOption = {
+            x, y
           }
+          const endOption = {
+            x: initX,
+            y: initY
+          }
+          obj['e' + eKey] = new TWEEN.Tween(startOption, false) // 创建一个修改“坐标”的新 tween。
+            .to(endOption, 600) // 在 1 秒内移动到 (300, 200)。
+            .easing(TWEEN.Easing.Quadratic.Out) // 使用缓动函数使动画流畅。
+            .onUpdate(() => {
+              const { x, y } = startOption
+              this.$refs['box' + eKey][0].style.setProperty('left', x + 'px')
+              this.$refs['box' + eKey][0].style.setProperty('top', y + 'px')
+              this.animeGroup[eKey] = {
+                ...ele,
+                x,
+                y,
+                option: {
+                  x: x + width / 2,
+                  y: y + height / 2
+                }
+              }
+            })
+            .start()
         }
-
       })
-      this.animeGroup = animeGroup;
-      window.animeGroup = animeGroup
-      // function animate(time) {
-      //   tween.update(time)
-      //   requestAnimationFrame(animate)
-      // }
-      // requestAnimationFrame(animate)
+      function animate(time) {
+        tween.update(time)
+        for (let el in obj) {
+          obj[el].update()
+        }
+        requestAnimationFrame(animate)
+      }
+      requestAnimationFrame(animate)
     },
     randomRange(min, max) {
       return Math.floor(Math.random() * (max - min + 1)) + min
@@ -765,10 +690,6 @@ body {
     position: absolute;
     transform-origin: center center;
     opacity: 0.3;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
     z-index: 2;
 
     .img {
