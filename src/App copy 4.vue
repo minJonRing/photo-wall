@@ -650,7 +650,7 @@ export default {
       const maxRange = 450
       // 遍历元素集 更新数据
       Object.values(this.animeGroup).filter(({ key: k }) => k != key).map((ele) => {
-        const { key: eKey, initX, initY, width, height, initOrigin: { x: ix, y: iy }, x, y, origin: { x: ex, y: ey }, transform: { x: tx, y: ty } } = ele;
+        const { key: eKey, initX, initY, width, height, initOrigin: { x: ix, y: iy }, x, y, origin: { x: ex, y: ey }, transform: { x: tx, y: ty, z: tz } } = ele;
         const { range: initRange } = this.angle({ x: sx, y: sy }, { x: ix, y: iy })
         const { range, radianS, radianC } = this.angle({ x: sx, y: sy }, { x: ex, y: ey })
         // 变化速度
@@ -661,28 +661,21 @@ export default {
         if (initRange <= maxRange) {
           const subRange = maxRange - range;
           // 100 100 50 150
-          const endX = Math.floor(radianC * subRange)
-          const endY = Math.floor(radianS * subRange)
+          const endX = x + Math.floor(radianC * subRange)
+          const endY = y - Math.floor(radianS * subRange)
           // -50 50
-          let subX = endX - tx, subY = endY - ty;
-          mx = tx + Math.ceil(subX / speed)
-          my = ty + Math.ceil(subY / speed)
-          if (eKey == 80) {
-            console.log(mx)
-          }
-          this.$refs['box' + eKey][0].style.setProperty('transform', `matrix3d(1,0,0,0, 0,1,0,0, 0,0,1,0, ${mx},${my},0,1)`)
+          let subX = endX - x, subY = endY - y;
+          mx = x + Math.ceil(subX / speed)
+          my = y + Math.ceil(subY / speed)
+          this.$refs['box' + eKey][0].style.setProperty('left', mx + 'px')
+          this.$refs['box' + eKey][0].style.setProperty('top', my + 'px')
           animeGroup[eKey] = {
             ...ele,
             x: mx,
             y: my,
             origin: {
-              x: ex + mx,
-              y: ey + my
-            },
-            transform: {
-              x: mx,
-              y: my,
-              z: 0
+              x: mx + width / 2,
+              y: my + height / 2
             }
           }
 
