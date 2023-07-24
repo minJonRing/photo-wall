@@ -10,8 +10,8 @@
       <!-- 显示的图片 -->
       <div v-for="(item, index) in showList" :key="'show' + index" :ref="`show` + item.key" class="box-show"
         :style="{ ...bindStyleShow(item) }">
-        <div class="img" :attr-key="item.key" @dblclick="handleHidden(item)">
-          {{ item.key }}
+        <div class="img" :attr-key="item.key">
+
         </div>
       </div>
     </div>
@@ -27,16 +27,16 @@ const wh = {
     height: 7
   },
   2: {
-    width: 52,
-    height: 70
+    width: 80,
+    height: 110
   },
   3: {
-    width: 78,
-    height: 105
+    width: 120,
+    height: 160
   },
   4: {
-    width: 104,
-    height: 140
+    width: 160,
+    height: 220
   },
   5: {
     width: 9,
@@ -66,20 +66,8 @@ export default {
       // 显示图片src
       showList: [],
       showAnime: {},
-      showOption: {
-        width: 165,
-        height: 220,
-        maxRange: 400
-      },
-      animeOption: {
-        // 2点距离小于maxRang 点元素进行移动
-        maxRange: 220,
-        // 变化速度
-        speed: 5
-      },
       // 初始化是否结束
-      initOver: false,
-      updateInterval: 0
+      initOver: false
     }
   },
   watch: {
@@ -104,12 +92,8 @@ export default {
     requestAnimationFrame(this.animate)
   },
   methods: {
-    animate(time) {
-      if (time - this.updateInterval > 30) {
-        this.initOver && this.animeUpload()
-      } else {
-        this.updateInterval = time
-      }
+    animate() {
+      this.initOver && this.animeUpload()
       requestAnimationFrame(this.animate)
     },
     init() {
@@ -552,8 +536,6 @@ export default {
       }
       document.addEventListener('mousemove', (e) => {
         if (move && target) {
-          const showAnime = JSON.parse(JSON.stringify(this.showAnime))
-          const showList = Object.values(showAnime)
           const { pageX, pageY } = e
           subX = pageX - initX
           subY = pageY - initY
@@ -563,54 +545,24 @@ export default {
           const { x, y, origin: { x: ox, y: oy } } = anime
           const mx = x + subX
           const my = y + subY
-          const _ox = ox + subX;
-          const _oy = oy + subY;
           target.style.left = mx + 'px'
           target.style.top = my + 'px'
-          showAnime[key] = {
+          this.showAnime[key] = {
             ...anime,
             x: mx,
             y: my,
             origin: {
-              x: _ox,
-              y: _oy,
+              x: ox + subX,
+              y: oy + subY,
             }
           }
-          const { maxRange } = this.showOption;
-          showList.filter(({ key: eKey }) => eKey != key).map(item => {
-            console.log(item)
-            const { x, y, origin, } = item
-            const { range, radianS, radianC } = this.angle({ x: _ox, y: _oy }, origin)
-            if (range < maxRange) {
-              // 最大距离 - 当前移动元素中心点和周围元素中心点的距离
-              const subRange = maxRange - range;
-              // 移动x,y轴的距离
-              const subX = Math.floor(radianC * subRange)
-              const subY = -Math.floor(radianS * subRange)
-              // x，y轴移动总距离
-              const mx = x + subX
-              const my = y + subY
-              const current = this.$refs['show' + eKey][0]
-              current.style.left = mx + 'px'
-              current.style.top = my + 'px'
-              showAnime[key] = {
-                ...item,
-                x: mx,
-                y: my,
-                origin: {
-                  x: origin.x + subX,
-                  y: origin.y + subY,
-                },
-              }
-            }
-          })
-          this.showAnime = showAnime
         }
       })
       document.addEventListener('mouseup', () => {
         if (move) {
           move = false
         }
+
       })
     },
     // 滚动事件
@@ -622,9 +574,8 @@ export default {
         const subX = scrollLeft - initScrollLeft
         initScrollLeft = scrollLeft;
         const showAnime = JSON.parse(JSON.stringify(this.showAnime))
-        const { width } = this.showOption
         Object.values(this.showAnime).map(ele => {
-          const { key, x, origin: { y } } = ele
+          const { key, x, width, origin: { y } } = ele
           const mx = x + subX
           showAnime[key] = {
             ...ele,
@@ -646,40 +597,22 @@ export default {
       if (!this.showAnime[key]) {
         const len = Object.keys(this.showAnime).length
         const anime = this.animeGroup[key]
-        const { width, height } = anime
-        const { width: sWidth, height: sHeight } = this.showOption
-        const sx = (sWidth - width) / 2, sy = (sHeight - height) / 2;
         showList[len] = {
-          ...anime,
-          width: sWidth,
-          height: sHeight,
-          left: left - sx,
-          top: top - sy,
+          ...anime, left, top
         }
-        this.showAnime[key] = { ...anime, x: left - sx, y: top - sy }
+        this.showAnime[key] = anime
         this.showList = showList;
       }
       this.$nextTick(() => {
 
       })
     },
-    // 隐藏按钮
-    handleHidden(item) {
-      const { key } = item;
-      const showList = JSON.parse(JSON.stringify(this.showList))
-      const shows = showList.map(({ key }) => key)
-      const index = shows.indexOf(key)
-      showList[index] = {}
-      this.showList = showList
-      delete this.showAnime[key]
-    },
     reset(item, data = []) {
-      const { initOrigin } = item;
+      const { origin } = item;
       const arr = new Array(data.length).fill(false)
-      const { maxRange, speed } = this.animeOption
       data.map((item, index) => {
-        const { range } = this.angle(item.origin, initOrigin)
-        if (range > maxRange + speed) {
+        const { range } = this.angle(item.origin, origin)
+        if (range > 400) {
           arr[index] = true
         }
       })
@@ -689,7 +622,8 @@ export default {
       const show = Object.values(this.showAnime)
       // 更新移动元素数据
       const animeGroup = this.anime(show)
-      const { speed } = this.animeOption
+      // 变化速度
+      const speed = 3
       Object.values(animeGroup).filter(({ move }) => !move).map(item => {
         const bool = this.reset(item, show)
         if (bool) {
@@ -700,8 +634,8 @@ export default {
             // 位置偏移量
             transform: { x: tx, y: ty },
           } = item;
-          const mx = tx + (tx >= 0 ? -(tx / speed) : Math.ceil(-tx / speed))
-          const my = ty + (ty >= 0 ? -(ty / speed) : Math.ceil(-ty / speed))
+          const mx = tx + (tx >= 0 ? -(tx / speed) : (-tx / speed))
+          const my = ty + (ty >= 0 ? -(ty / speed) : (-ty / speed))
           animeGroup[key] = {
             ...item,
             origin: {
@@ -739,7 +673,10 @@ export default {
     anime(show) {
       // 拷贝元素集数据
       const animeGroup = JSON.parse(JSON.stringify(this.animeGroup))
-      const { maxRange, speed } = this.animeOption
+      // 2点距离小于maxRang 点元素进行移动
+      const maxRange = 350
+      // 变化速度
+      const speed = 8
       show.map(item => {
         // 当前移动元素及中心点位置
         const { origin: { x: sx, y: sy } } = item
@@ -754,20 +691,22 @@ export default {
             // 位置偏移量
             transform: { x: tx, y: ty },
           } = ele;
-          const { range: initRange } = this.angle({ x: sx, y: sy }, { x: ix, y: iy })
+          // 
+          // const { range: initRange } = this.angle({ x: sx, y: sy }, { x: ix, y: iy })
           const { range, radianS, radianC } = this.angle({ x: sx, y: sy }, { x: ex, y: ey })
+
           // 移动到的位置
-          let mx = 0;
-          let my = 0;
-          if (initRange < maxRange) {
+          let mx = 0
+          let my = 0
+          if (range < maxRange) {
             // 最大距离 - 当前移动元素中心点和周围元素中心点的距离
             const subRange = maxRange - range;
             // 移动x,y轴的距离
             const subX = radianC * subRange
             const subY = -(radianS * subRange)
             // x，y轴移动总距离
-            mx = tx + (subX / speed)
-            my = ty + (subY / speed)
+            mx = tx + subX / speed
+            my = ty + subY / speed
             animeGroup[key] = {
               ...ele,
               origin: {
@@ -782,6 +721,25 @@ export default {
               move: true
             }
           }
+          // else  if (initRange > (maxRange + 5)) {
+          //   if (!move) {
+          //     mx = tx + (tx >= 0 ? -Math.ceil(tx / speed) : Math.ceil(-tx / speed))
+          //     my = ty + (ty >= 0 ? -Math.ceil(ty / speed) : Math.ceil(-ty / speed))
+          //     animeGroup[key] = {
+          //       ...ele,
+          //       origin: {
+          //         x: ix + mx,
+          //         y: iy + my
+          //       },
+          //       transform: {
+          //         x: mx,
+          //         y: my,
+          //         z: 0
+          //       },
+          //       move: 2
+          //     }
+          //   }
+          // }
         })
       })
       return animeGroup;
@@ -801,7 +759,7 @@ export default {
       }
     },
     bindStyleShow(item) {
-      const { width = 0, height = 0, left = 0, top = 0 } = item;
+      const { width, height, left, top } = item;
       return {
         width: width + 'px',
         height: height + 'px',
