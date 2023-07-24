@@ -3,8 +3,15 @@
     <div ref="list" class="photo-wall">
       <div v-for="item in initList" :key="'no' + item.key" :ref="`box${item.key}`" :class="['box', 'box' + item.key]"
         :attr-key="item.key" :style="bindStyle(item)">
-        <div class="img" @click="handleClick(item)" @dblclick="handleClick(item, 'db')" :attr-key="item.key">
+        <div class="img" @click.stop="handleClick(item)" :attr-key="item.key">
           <!-- <img :src="item.src" /> -->{{ item.key }}
+        </div>
+      </div>
+      <!-- 显示的图片 -->
+      <div v-for="(item, index) in showList" :key="'show' + index" :ref="`show` + item.key" class="box-show"
+        :style="{ ...bindStyleShow(item) }">
+        <div class="img" :attr-key="item.key">
+
         </div>
       </div>
     </div>
@@ -58,7 +65,8 @@ export default {
       // 一个大组的长度
       piece: 0,
       // 显示图片src
-      showSrc: '',
+      showList: [],
+      showAnime: {}
     }
   },
   watch: {
@@ -67,12 +75,13 @@ export default {
   mounted() {
     this.mid = window.innerHeight / 2
     this.init()
-    this.createGos(new Array(800).fill(1))
+    this.createGos(new Array(200).fill(1))
+    this.showList = new Array(10).fill({})
     this.$nextTick(() => {
       this.initAnime()
       // 
       this.initHandle()
-      this.initScroll()
+      // this.initScroll()
     })
 
     window.angle = this.angle
@@ -510,32 +519,31 @@ export default {
       let initY = 0
       let subX = 0
       let subY = 0
-      const imsg = document.querySelectorAll('.box')
+      const imsg = document.querySelectorAll('.box-show')
       for (let img of imsg) {
         img.addEventListener('mousedown', (e) => {
           const { pageX, pageY } = e
           key = e.target.attributes['attr-key'].value
-          target = this.$refs['box' + key][0]
-          target.style.zIndex = 99
+          target = this.$refs['show' + key][0]
           initX = pageX
           initY = pageY
           move = true
         })
       }
       document.addEventListener('mousemove', (e) => {
-        if (move) {
+        if (move && target) {
           const { pageX, pageY } = e
           subX = pageX - initX
           subY = pageY - initY
           initX = pageX
           initY = pageY
-          const anime = this.animeGroup[key]
+          const anime = this.showAnime[key]
           const { x, y, width, height } = anime
           const mx = x + subX
           const my = y + subY
           target.style.left = mx + 'px'
           target.style.top = my + 'px'
-          this.animeGroup[key] = {
+          this.showAnime[key] = {
             ...anime,
             x: mx,
             y: my,
@@ -547,8 +555,11 @@ export default {
         }
       })
       document.addEventListener('mouseup', () => {
-        target.style.zIndex = 2
-        move = false
+        if (move && target) {
+          target.style.zIndex = 2
+          move = false
+        }
+
       })
     },
     // 滚动事件
@@ -575,67 +586,90 @@ export default {
       })
     },
     // 点击图片
-    handleClick(item, type) {
-      const { key } = item;
-      const { show } = this.animeGroup[key]
-      if (type === 'db') {
-        console.log(1)
-        if (show) {
-          this.animeGroup[key].show = false
+    handleClick(item) {
+      const { key, left, top } = item;
+      const showList = JSON.parse(JSON.stringify(this.showList))
+      if (!this.showAnime[key]) {
+        const len = Object.keys(this.showAnime).length
+        const anime = this.animeGroup[key]
+        showList[len] = {
+          ...anime, left, top
         }
-      } else {
-        console.log(2)
-        if (!show) {
-          this.animeGroup[key].show = true
-        }
+        this.showAnime[key] = anime
+        this.showList = showList;
       }
-      this.animeUpload()
+      this.$nextTick(() => {
+        // this.$refs['show' + key][0]?.style
+      })
+    },
+    reset(item, data = []) {
+      let re = false;
+      const { initOrigin, transform: { x, y } } = item
+      data.map(item => {
+        const { range } = this.angle(item.origin, initOrigin)
+        if (range > 380 && (x != 0 || y != 0)) {
+          re = true
+        }
+      })
+      return re
     },
     animeUpload() {
+      const show = Object.values(this.showAnime)
       const data = Object.values(this.animeGroup)
-      const showEle = data.filter(({ show }) => show);
-      showEle.map((item) => {
-        let w = 300, h = 400
+      // 执行每个显示元素 周围元素的位移
+      show.map((item) => {
         const { key } = item;
-        const { width, height, x, y } = this.animeGroup[key]
-        const subW = (w - width) / 2
-        const subH = (h - height) / 2;
-        const startOption = {
-          width,
-          height,
-          x,
-          y,
-          z: 100
-        }
-        const endOption = {
-          width: w,
-          height: h,
-          x: x - subW,
-          y: y - subH,
-          z: 0
-        }
-        this.$refs['box' + key][0].style.setProperty('z-index', 99)
-        this.anime(key, startOption, endOption)
+        this.anime(key)
       })
 
-      data.filter(({ show }) => !show).map(item => {
+      // 对运动的元素 进行位移更新
+      data.map(item => {
         const { key, transform: { x, y } } = item
         if (x != 0 || y != 0) {
           this.$refs['box' + key][0].style.setProperty('transform', `matrix3d(1,0,0,0, 0,1,0,0, 0,0,1,0, ${x},${y},0,1)`)
         }
       })
-
+      // 对不在范围没的元素 进行复原更新
+      // 变化速度
+      // 拷贝元素集数据
+      let animeGroup = JSON.parse(JSON.stringify(this.animeGroup))
+      const speed = 3
+      data.map(item => {
+        const re = this.reset(item, show)
+        if (re) {
+          const {
+            key,
+            initOrigin: { x: ix, y: iy },
+            transform: { x: tx, y: ty }
+          } = item;
+          const mx = tx + (tx > 0 ? -Math.ceil(tx / speed) : Math.ceil(-tx / speed))
+          const my = ty + (ty > 0 ? -Math.ceil(ty / speed) : Math.ceil(-ty / speed))
+          animeGroup[key] = {
+            ...item,
+            origin: {
+              x: ix + mx,
+              y: iy + my
+            },
+            transform: {
+              x: mx,
+              y: my,
+              z: 0
+            }
+          }
+        }
+      })
+      this.animeGroup = animeGroup;
     },
     anime(key) {
       // 放大元素信息
-      const animeItem = this.animeGroup[key]
+      const animeItem = this.showAnime[key]
       const { origin: { x: sx, y: sy } } = animeItem
       // 拷贝元素集数据
       let animeGroup = JSON.parse(JSON.stringify(this.animeGroup))
       // 2点距离小于maxRang 点元素进行移动
       const maxRange = 380
       // 遍历元素集 更新数据
-      Object.values(this.animeGroup).filter(({ key: k }) => k != key).map((ele) => {
+      Object.values(this.animeGroup).map((ele) => {
         const {
           key: eKey,
           // width, height,
@@ -679,33 +713,27 @@ export default {
             }
           }
 
-        } else if (initRange > maxRange && !ele.show && (tx != 0 || ty != 0)) {
-          // -50 + 
-          mx = tx + (tx > 0 ? -Math.ceil(tx / speed) : Math.ceil(-tx / speed))
-          my = ty + (ty > 0 ? -Math.ceil(ty / speed) : Math.ceil(-ty / speed))
-          // this.$refs['box' + eKey][0].style.setProperty('transform', `matrix3d(1,0,0,0, 0,1,0,0, 0,0,1,0, ${mx},${my},0,1)`)
-          animeGroup[eKey] = {
-            ...ele,
-            origin: {
-              x: ix + mx,
-              y: iy + my
-            },
-            transform: {
-              x: mx,
-              y: my,
-              z: 0
-            }
-          }
+        } else if (initRange > maxRange && (tx != 0 || ty != 0)) {
+          // mx = tx + (tx > 0 ? -Math.ceil(tx / speed) : Math.ceil(-tx / speed))
+          // my = ty + (ty > 0 ? -Math.ceil(ty / speed) : Math.ceil(-ty / speed))
+          // // this.$refs['box' + eKey][0].style.setProperty('transform', `matrix3d(1,0,0,0, 0,1,0,0, 0,0,1,0, ${mx},${my},0,1)`)
+          // animeGroup[eKey] = {
+          //   ...ele,
+          //   origin: {
+          //     x: ix + mx,
+          //     y: iy + my
+          //   },
+          //   transform: {
+          //     x: mx,
+          //     y: my,
+          //     z: 0
+          //   }
+          // }
         }
 
       })
       this.animeGroup = animeGroup;
       window.animeGroup = animeGroup
-      // function animate(time) {
-      //   tween.update(time)
-      //   requestAnimationFrame(animate)
-      // }
-      // requestAnimationFrame(animate)
     },
     randomRange(min, max) {
       return Math.floor(Math.random() * (max - min + 1)) + min
@@ -718,6 +746,16 @@ export default {
         left: left + 'px',
         top: top + 'px',
         transform,
+        padding: this.padding
+      }
+    },
+    bindStyleShow(item) {
+      const { width, height, left, top } = item;
+      return {
+        width: width + 'px',
+        height: height + 'px',
+        left: left + 'px',
+        top: top + 'px',
         padding: this.padding
       }
     }
@@ -763,6 +801,29 @@ body {
     -ms-user-select: none;
     user-select: none;
     z-index: 2;
+
+    .img {
+      height: 100%;
+      background-color: #efefef;
+
+      img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+  }
+
+  .box-show {
+    position: absolute;
+    transform-origin: center center;
+    opacity: 1;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    z-index: 29;
 
     .img {
       height: 100%;

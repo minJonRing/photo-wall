@@ -3,8 +3,14 @@
     <div ref="list" class="photo-wall">
       <div v-for="item in initList" :key="'no' + item.key" :ref="`box${item.key}`" :class="['box', 'box' + item.key]"
         :attr-key="item.key" :style="bindStyle(item)">
-        <div class="img" @click="handleClick(item)" @dblclick="handleClick(item, 'db')" :attr-key="item.key">
+        <div class="img" @click="handleClick(item)" :attr-key="item.key">
           <!-- <img :src="item.src" /> -->{{ item.key }}
+        </div>
+      </div>
+      <!-- 显示的图片 -->
+      <div v-for="item in showList" :key="'show' + item.key" class="box-show">
+        <div class="img">
+
         </div>
       </div>
     </div>
@@ -58,7 +64,7 @@ export default {
       // 一个大组的长度
       piece: 0,
       // 显示图片src
-      showSrc: '',
+      showList: []
     }
   },
   watch: {
@@ -575,21 +581,25 @@ export default {
       })
     },
     // 点击图片
-    handleClick(item, type) {
-      const { key } = item;
-      const { show } = this.animeGroup[key]
-      if (type === 'db') {
-        console.log(1)
-        if (show) {
-          this.animeGroup[key].show = false
-        }
-      } else {
-        console.log(2)
-        if (!show) {
-          this.animeGroup[key].show = true
-        }
+    handleClick(item) {
+      const { key } = item
+      const keys = this.showList.map(({ key }) => key)
+      if (!keys.includes(key)) {
+        this.showList.push(item)
       }
-      this.animeUpload()
+      // const { show } = this.animeGroup[key]
+      // if (type === 'db') {
+      //   console.log(1)
+      //   if (show) {
+      //     this.animeGroup[key].show = false
+      //   }
+      // } else {
+      //   console.log(2)
+      //   if (!show) {
+      //     this.animeGroup[key].show = true
+      //   }
+      // }
+      // this.animeUpload()
     },
     animeUpload() {
       const data = Object.values(this.animeGroup)
@@ -680,7 +690,6 @@ export default {
           }
 
         } else if (initRange > maxRange && !ele.show && (tx != 0 || ty != 0)) {
-          // -50 + 
           mx = tx + (tx > 0 ? -Math.ceil(tx / speed) : Math.ceil(-tx / speed))
           my = ty + (ty > 0 ? -Math.ceil(ty / speed) : Math.ceil(-ty / speed))
           // this.$refs['box' + eKey][0].style.setProperty('transform', `matrix3d(1,0,0,0, 0,1,0,0, 0,0,1,0, ${mx},${my},0,1)`)
@@ -701,11 +710,6 @@ export default {
       })
       this.animeGroup = animeGroup;
       window.animeGroup = animeGroup
-      // function animate(time) {
-      //   tween.update(time)
-      //   requestAnimationFrame(animate)
-      // }
-      // requestAnimationFrame(animate)
     },
     randomRange(min, max) {
       return Math.floor(Math.random() * (max - min + 1)) + min
@@ -763,6 +767,29 @@ body {
     -ms-user-select: none;
     user-select: none;
     z-index: 2;
+
+    .img {
+      height: 100%;
+      background-color: #efefef;
+
+      img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+  }
+
+  .box-show {
+    position: absolute;
+    transform-origin: center center;
+    opacity: 1;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    z-index: 9;
 
     .img {
       height: 100%;

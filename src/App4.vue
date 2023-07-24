@@ -8,6 +8,9 @@
         </div>
       </div>
     </div>
+    <div :class="['mask', show ? 'active' : '']" @click="show = false">
+      <div class="info">123</div>
+    </div>
     <div class="drop" ref="drop"></div>
     <div class="line"></div>
   </div>
@@ -57,12 +60,37 @@ export default {
       mid: 0,
       // 一个大组的长度
       piece: 0,
+      // 显示蒙版
+      show: false,
+      initStyle: {
+
+      },
       // 显示图片src
       showSrc: '',
     }
   },
   watch: {
-
+    show(data) {
+      if (!data) {
+        const { width, height, top, bottom, left } = this.initStyle
+        this.$refs.photo.style.width = width
+        this.$refs.photo.style.height = height
+        this.$refs.photo.style.left = left
+        if (top) {
+          this.$refs.photo.style.top = top
+          this.$refs.photo.style.bottom = 'inherit'
+        } else {
+          this.$refs.photo.style.bottom = bottom
+          this.$refs.photo.style.top = 'inherit'
+        }
+        setTimeout(() => {
+          this.$refs.photo.style.left = 'inherit'
+          this.$refs.photo.style.top = 'inherit'
+          this.$refs.photo.style.bottom = 'inherit'
+          this.$refs.photo.style['transition-duration'] = 0
+        }, 601);
+      }
+    }
   },
   mounted() {
     this.mid = window.innerHeight / 2
@@ -456,8 +484,8 @@ export default {
     initAnime(time = 600) {
       setTimeout(() => {
         const obj = {};
-        Object.values(this.animeGroup).map((ele) => {
-          const { key, transform } = ele
+        for (let key in this.animeGroup) {
+          const { transform } = this.animeGroup[key]
           const option = { ...transform, opacity: 0.3 }
           obj['e' + key] = new TWEEN.Tween(option, false) // 创建一个修改“坐标”的新 tween。
             .to({ x: 0, y: 0, z: 0, opacity: 1 }, 1200) // 在 1 秒内移动到 (300, 200)。
@@ -468,11 +496,7 @@ export default {
             })
             .delay(Math.floor(Math.random() * 600))
             .start()
-          this.animeGroup[key] = {
-            ...ele,
-            transform: { x: 0, y: 0, z: 0 }
-          }
-        })
+        }
         function animate() {
           for (let el in obj) {
             obj[el].update()
@@ -589,11 +613,10 @@ export default {
           this.animeGroup[key].show = true
         }
       }
-      this.animeUpload()
+      // this.animeUpload()
     },
     animeUpload() {
-      const data = Object.values(this.animeGroup)
-      const showEle = data.filter(({ show }) => show);
+      const showEle = Object.values(this.animeGroup).filter(({ show }) => show);
       showEle.map((item) => {
         let w = 300, h = 400
         const { key } = item;
@@ -614,17 +637,8 @@ export default {
           y: y - subH,
           z: 0
         }
-        this.$refs['box' + key][0].style.setProperty('z-index', 99)
         this.anime(key, startOption, endOption)
       })
-
-      data.filter(({ show }) => !show).map(item => {
-        const { key, transform: { x, y } } = item
-        if (x != 0 || y != 0) {
-          this.$refs['box' + key][0].style.setProperty('transform', `matrix3d(1,0,0,0, 0,1,0,0, 0,0,1,0, ${x},${y},0,1)`)
-        }
-      })
-
     },
     anime(key) {
       // 放大元素信息
@@ -633,22 +647,10 @@ export default {
       // 拷贝元素集数据
       let animeGroup = JSON.parse(JSON.stringify(this.animeGroup))
       // 2点距离小于maxRang 点元素进行移动
-      const maxRange = 380
+      const maxRange = 450
       // 遍历元素集 更新数据
       Object.values(this.animeGroup).filter(({ key: k }) => k != key).map((ele) => {
-        const {
-          key: eKey,
-          // width, height,
-          // 固定初始值
-          // initX, initY,
-          initOrigin: { x: ix, y: iy },
-          // 变化位置
-          // x, y,
-          origin: { x: ex, y: ey },
-          // 
-          transform: { x: tx, y: ty }
-        } = ele;
-        // 
+        const { key: eKey, initX, initY, width, height, initOrigin: { x: ix, y: iy }, x, y, origin: { x: ex, y: ey } } = ele;
         const { range: initRange } = this.angle({ x: sx, y: sy }, { x: ix, y: iy })
         const { range, radianS, radianC } = this.angle({ x: sx, y: sy }, { x: ex, y: ey })
         // 变化速度
@@ -656,44 +658,40 @@ export default {
         // 移动到的位置
         let mx = 0
         let my = 0
-        if (initRange < maxRange) {
+        if (initRange <= maxRange) {
           const subRange = maxRange - range;
           // 100 100 50 150
-          const subX = Math.floor(radianC * subRange)
-          const subY = -Math.floor(radianS * subRange)
-          mx = tx + Math.ceil(subX / speed)
-          my = ty + Math.ceil(subY / speed)
-          // mx = tx + (subX > 0 ? Math.ceil(subX / speed) : -Math.ceil(-subX / speed))
-          // my = ty + (subY > 0 ? Math.ceil(subY / speed) : -Math.ceil(-subY / speed))
-          // this.$refs['box' + eKey][0].style.setProperty('transform', `matrix3d(1,0,0,0, 0,1,0,0, 0,0,1,0, ${mx},${my},0,1)`)
+          const endX = x + Math.floor(radianC * subRange)
+          const endY = y - Math.floor(radianS * subRange)
+          // -50 50
+          let subX = endX - x, subY = endY - y;
+          mx = x + Math.ceil(subX / speed)
+          my = y + Math.ceil(subY / speed)
+          this.$refs['box' + eKey][0].style.setProperty('left', mx + 'px')
+          this.$refs['box' + eKey][0].style.setProperty('top', my + 'px')
           animeGroup[eKey] = {
             ...ele,
+            x: mx,
+            y: my,
             origin: {
-              x: ix + mx,
-              y: iy + my
-            },
-            transform: {
-              x: mx,
-              y: my,
-              z: 0
+              x: mx + width / 2,
+              y: my + height / 2
             }
           }
 
-        } else if (initRange > maxRange && !ele.show && (tx != 0 || ty != 0)) {
-          // -50 + 
-          mx = tx + (tx > 0 ? -Math.ceil(tx / speed) : Math.ceil(-tx / speed))
-          my = ty + (ty > 0 ? -Math.ceil(ty / speed) : Math.ceil(-ty / speed))
-          // this.$refs['box' + eKey][0].style.setProperty('transform', `matrix3d(1,0,0,0, 0,1,0,0, 0,0,1,0, ${mx},${my},0,1)`)
+        } else if (initRange > (maxRange + 1) && !ele.show && (initX != x || initY != y)) {
+          let subX = initX - x, subY = initY - y;
+          mx = x + (subX > 0 ? Math.ceil(subX / speed) : -Math.ceil(-subX / speed))
+          my = y + (subY > 0 ? Math.ceil(subY / speed) : -Math.ceil(-subY / speed))
+          this.$refs['box' + eKey][0].style.setProperty('left', mx + 'px')
+          this.$refs['box' + eKey][0].style.setProperty('top', my + 'px')
           animeGroup[eKey] = {
             ...ele,
+            x: mx,
+            y: my,
             origin: {
-              x: ix + mx,
-              y: iy + my
-            },
-            transform: {
-              x: mx,
-              y: my,
-              z: 0
+              x: mx + width / 2,
+              y: my + height / 2
             }
           }
         }
