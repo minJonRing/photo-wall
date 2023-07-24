@@ -590,7 +590,7 @@ export default {
               // x，y轴移动总距离
               const mx = x + subX
               const my = y + subY
-              const current = this.$refs['show' + eKey][0]
+              const current = this.$refs['show' + item.key][0]
               current.style.left = mx + 'px'
               current.style.top = my + 'px'
               showAnime[key] = {
@@ -608,7 +608,8 @@ export default {
         }
       })
       document.addEventListener('mouseup', () => {
-        if (move) {
+        if (move || target) {
+          target = null
           move = false
         }
       })
